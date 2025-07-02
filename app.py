@@ -3,6 +3,7 @@ from flask_cors import CORS
 from firebase_config import db
 from datetime import datetime
 from math import radians, sin, cos, sqrt, atan2
+import os;
 
 app = Flask(__name__)
 
@@ -73,4 +74,5 @@ def mark_attendance():
 
 
 if __name__ == "__main__":
-    app.run(host="::", port=5000, debug=True, threaded=True)
+    port = int(os.environ.get("PORT", 5000))  # fallback to 5000 locally
+    app.run(host="0.0.0.0", port=port)
