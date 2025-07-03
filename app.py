@@ -3,10 +3,9 @@ from flask_cors import CORS
 from firebase_config import db
 from datetime import datetime
 from math import radians, sin, cos, sqrt, atan2
-import os;
+import os
 
 app = Flask(__name__)
-
 CORS(app, origins=["http://127.0.0.1:5173"], supports_credentials=True)
 
 @app.route('/api/attendance', methods=['GET'])
@@ -19,22 +18,20 @@ def get_attendance():
             data = doc.to_dict()
             timestamp = data.get("timestamp")
             timestamp_str = (
-                timestamp.isoformat()
-                if hasattr(timestamp, "isoformat")
-                else str(timestamp)
+                timestamp.isoformat() if hasattr(timestamp, "isoformat") else str(timestamp)
             )
 
             attendance_list.append({
                 "userId": data.get("userId", "Unknown"),
                 "status": data.get("status", "Unknown"),
-                "timestamp": timestamp_str
+                "timestamp": timestamp_str,
+                "absentTimestamps": data.get("absentTimestamps", [])
             })
 
         return jsonify(attendance_list), 200
 
     except Exception as e:
         return jsonify({"error": "Internal Server Error", "details": str(e)}), 500
-
 
 @app.route('/api/attendance', methods=['POST'])
 def mark_attendance():
@@ -61,23 +58,36 @@ def mark_attendance():
         docs = db.collection("attendance").where("userId", "==", user_id).limit(1).stream()
         doc = next(docs, None)
 
+        now = datetime.utcnow()
+
         if doc:
-            db.collection("attendance").document(doc.id).update({
+            doc_ref = db.collection("attendance").document(doc.id)
+            update_data = {
                 "latitude": lat,
                 "longitude": lon,
                 "altitude": alt,
                 "status": status,
-                "timestamp": datetime.utcnow()
-            })
+                "timestamp": now
+            }
+
+            if status == "Absent":
+                existing = doc.to_dict().get("absentTimestamps", [])
+                existing.append(now.isoformat())
+                update_data["absentTimestamps"] = existing
+
+            doc_ref.update(update_data)
+
         else:
-            db.collection("attendance").add({
+            initial_data = {
                 "userId": user_id,
                 "latitude": lat,
                 "longitude": lon,
                 "altitude": alt,
                 "status": status,
-                "timestamp": datetime.utcnow()
-            })
+                "timestamp": now,
+                "absentTimestamps": [now.isoformat()] if status == "Absent" else []
+            }
+            db.collection("attendance").add(initial_data)
 
         return jsonify({"message": "Attendance recorded", "status": status}), 200
 
