@@ -17,15 +17,19 @@ def get_attendance():
         for doc in docs:
             data = doc.to_dict()
             timestamp = data.get("timestamp")
-            timestamp_str = (
-                timestamp.isoformat() if hasattr(timestamp, "isoformat") else str(timestamp)
-            )
+            timestamp_str = timestamp.isoformat() if hasattr(timestamp, "isoformat") else str(timestamp)
+
+            raw_absents = data.get("absentTimestamps", [])
+            formatted_absents = [
+                ts.isoformat() if hasattr(ts, "isoformat") else str(ts)
+                for ts in raw_absents
+            ]
 
             attendance_list.append({
                 "userId": data.get("userId", "Unknown"),
                 "status": data.get("status", "Unknown"),
                 "timestamp": timestamp_str,
-                "absentTimestamps": data.get("absentTimestamps", [])
+                "absentTimestamps": formatted_absents
             })
 
         return jsonify(attendance_list), 200
@@ -72,11 +76,10 @@ def mark_attendance():
 
             if status == "Absent":
                 existing = doc.to_dict().get("absentTimestamps", [])
-                existing.append(now.isoformat())
+                existing.append(now) 
                 update_data["absentTimestamps"] = existing
 
             doc_ref.update(update_data)
-
         else:
             initial_data = {
                 "userId": user_id,
@@ -85,7 +88,7 @@ def mark_attendance():
                 "altitude": alt,
                 "status": status,
                 "timestamp": now,
-                "absentTimestamps": [now.isoformat()] if status == "Absent" else []
+                "absentTimestamps": [now] if status == "Absent" else []
             }
             db.collection("attendance").add(initial_data)
 
