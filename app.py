@@ -56,7 +56,7 @@ def mark_attendance():
 
         target_lat, target_lon = 22.6145739, 88.4140470
         distance = calculate_distance(lat, lon, target_lat, target_lon)
-        status = "Present" if distance <= 50 else "Absent"
+        status = "Present" if distance <= 5 else "Absent"
 
         docs = db.collection("attendance").where("userId", "==", user_id).limit(1).stream()
         doc = next(docs, None)
