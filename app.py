@@ -58,21 +58,32 @@ def mark_attendance():
         distance = calculate_distance(lat, lon, target_lat, target_lon)
         status = "Present" if distance <= 50 else "Absent"
 
-        db.collection("attendance").add({
-            "userId": user_id,
-            "latitude": lat,
-            "longitude": lon,
-            "altitude": alt,
-            "status": status,
-            "timestamp": datetime.utcnow()
-        })
+        docs = db.collection("attendance").where("userId", "==", user_id).limit(1).stream()
+        doc = next(docs, None)
+
+        if doc:
+            db.collection("attendance").document(doc.id).update({
+                "latitude": lat,
+                "longitude": lon,
+                "altitude": alt,
+                "status": status,
+                "timestamp": datetime.utcnow()
+            })
+        else:
+            db.collection("attendance").add({
+                "userId": user_id,
+                "latitude": lat,
+                "longitude": lon,
+                "altitude": alt,
+                "status": status,
+                "timestamp": datetime.utcnow()
+            })
 
         return jsonify({"message": "Attendance recorded", "status": status}), 200
 
     except Exception as e:
         return jsonify({"error": "Internal Server Error", "details": str(e)}), 500
 
-
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))  # fallback to 5000 locally
+    port = int(os.environ.get("PORT", 5000)) 
     app.run(host="0.0.0.0", port=port)
