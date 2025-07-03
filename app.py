@@ -6,7 +6,7 @@ from math import radians, sin, cos, sqrt, atan2
 import os
 
 app = Flask(__name__)
-CORS(app, origins=["http://127.0.0.1:5173"], supports_credentials=True)
+CORS(app, origins=["http://127.0.0.1:5173","https://attendance-admin-dashboard.onrender.com"], supports_credentials=True)
 
 @app.route('/api/attendance', methods=['GET'])
 def get_attendance():
