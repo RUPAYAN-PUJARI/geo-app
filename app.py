@@ -97,7 +97,7 @@ def mark_attendance():
         vertical_distance = abs(alt - target_alt)
 
         # Final check with both horizontal and vertical bounds
-        status = "Present" if horizontal_distance <= 5 and vertical_distance <= 10 else "Absent"
+        status = "Present" if horizontal_distance <= 10 and vertical_distance <= 10 else "Absent"
 
         collection_name = f"attendance_{company.lower()}"
         docs = db.collection(collection_name).where("userId", "==", user_id).limit(1).stream()
