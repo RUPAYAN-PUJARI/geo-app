@@ -62,13 +62,14 @@ def get_attendance_for_company(company):
         return jsonify({"error": "Internal Server Error", "details": str(e)}), 500
 
 @app.route('/api/attendance', methods=['POST'])
+@app.route('/api/attendance', methods=['POST'])
 def mark_attendance():
     try:
         data = request.get_json()
         user_id = data.get("userId")
         company = data.get("companyName")
         lat, lon = data.get("latitude"), data.get("longitude")
-        alt = data.get("altitude")
+        alt = data.get("altitude", 0)  # default to 0 if not provided
 
         if not user_id or not company or lat is None or lon is None:
             return jsonify({"error": "Missing required fields"}), 400
@@ -80,17 +81,23 @@ def mark_attendance():
             return jsonify({"error": "Company not found"}), 404
 
         coords = company_doc.to_dict()
-        target_lat, target_lon = coords["latitude"], coords["longitude"]
+        target_lat = coords.get("latitude")
+        target_lon = coords.get("longitude")
+        target_alt = coords.get("altitude", 0)
 
         def calculate_distance(lat1, lon1, lat2, lon2):
-            R = 6371000
+            R = 6371000  # Earth radius in meters
             dLat = radians(lat2 - lat1)
             dLon = radians(lon2 - lon1)
             a = sin(dLat / 2)**2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dLon / 2)**2
             return R * 2 * atan2(sqrt(a), sqrt(1 - a))
 
-        distance = calculate_distance(lat, lon, target_lat, target_lon)
-        status = "Present" if distance <= 5 else "Absent"
+        # Calculate horizontal distance and altitude difference
+        horizontal_distance = calculate_distance(lat, lon, target_lat, target_lon)
+        vertical_distance = abs(alt - target_alt)
+
+        # Final check with both horizontal and vertical bounds
+        status = "Present" if horizontal_distance <= 5 and vertical_distance <= 10 else "Absent"
 
         collection_name = f"attendance_{company.lower()}"
         docs = db.collection(collection_name).where("userId", "==", user_id).limit(1).stream()
